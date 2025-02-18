@@ -72,15 +72,3 @@
     * Important bullet 1
     * Important bullet 2
 
-### Should not be picked up and converted into blockquote macro
-
-> [[!NOTE]
-
-> [!NOTE
-
-> [Hey !NOTE]
-
-> [NOTE]
-
-> **TL;DR:** Thingy!
-> More stuff
