@@ -1,10 +1,6 @@
-<!-- Space: DevOps -->
-<!-- Parent: Test Area -->
-<!-- Title: mark-admonition-test -->
+# Main Heading
 
-# Main Headingssss
-
-## First Headings
+## First Heading
 
 !!! note "NOTES:"
     1. Note number one
