@@ -59,7 +59,14 @@ func (c *ConfluenceExtension) Extend(m goldmark.Markdown) {
 		util.Prioritized(crenderer.NewConfluenceImageRenderer(c.Stdlib, c, c.Path), 100),
 		util.Prioritized(crenderer.NewConfluenceParagraphRenderer(), 100),
 		util.Prioritized(crenderer.NewConfluenceLinkRenderer(), 100),
+		util.Prioritized(crenderer.NewConfluenceAdmonitionRenderer(), 100),
 	))
+
+	m.Parser().AddOptions(
+		parser.WithBlockParsers(
+			util.Prioritized(cparser.NewAdmonitionParser(), 100),
+		),
+	)
 
 	m.Parser().AddOptions(parser.WithInlineParsers(
 		// Must be registered with a higher priority than goldmark's linkParser to make sure goldmark doesn't parse
