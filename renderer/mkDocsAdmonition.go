@@ -11,51 +11,51 @@ import (
 )
 
 // HeadingAttributeFilter defines attribute names which heading elements can have
-var AdmonitionAttributeFilter = html.GlobalAttributeFilter
+var MkDocsAdmonitionAttributeFilter = html.GlobalAttributeFilter
 
 // A Renderer struct is an implementation of renderer.NodeRenderer that renders
 // nodes as (X)HTML.
-type ConfluenceAdmonitionRenderer struct {
+type ConfluenceMkDocsAdmonitionRenderer struct {
 	html.Config
-	LevelMap AdmonitionLevelMap
+	LevelMap MkDocsAdmonitionLevelMap
 }
 
 // NewConfluenceRenderer creates a new instance of the ConfluenceRenderer
-func NewConfluenceAdmonitionRenderer(opts ...html.Option) renderer.NodeRenderer {
-	return &ConfluenceAdmonitionRenderer{
+func NewConfluenceMkDocsAdmonitionRenderer(opts ...html.Option) renderer.NodeRenderer {
+	return &ConfluenceMkDocsAdmonitionRenderer{
 		Config:   html.NewConfig(),
 		LevelMap: nil,
 	}
 }
 
-// RegisterFuncs implements NodeRenderer.RegisterFuncs .
-func (r *ConfluenceAdmonitionRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
-	reg.Register(parser.KindAdmonition, r.renderAdmon)
+// RegisterFuncs implements NodeRenderer.RegisterFuncs.
+func (r *ConfluenceMkDocsAdmonitionRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+	reg.Register(parser.KindMkDocsAdmonition, r.renderMkDocsAdmon)
 }
 
-// Define AdmonitionType enum
-type AdmonitionType int
+// Define MkDocsAdmonitionType enum
+type MkDocsAdmonitionType int
 
 const (
-	AInfo AdmonitionType = iota
+	AInfo MkDocsAdmonitionType = iota
 	ANote
 	AWarn
 	ATip
 	ANone
 )
 
-func (t AdmonitionType) String() string {
+func (t MkDocsAdmonitionType) String() string {
 	return []string{"info", "note", "warning", "tip", "none"}[t]
 }
 
-type AdmonitionLevelMap map[ast.Node]int
+type MkDocsAdmonitionLevelMap map[ast.Node]int
 
-func (m AdmonitionLevelMap) Level(node ast.Node) int {
+func (m MkDocsAdmonitionLevelMap) Level(node ast.Node) int {
 	return m[node]
 }
 
-func ParseAdmonitionType(node ast.Node) AdmonitionType {
-	n, ok := node.(*parser.Admonition)
+func ParseMkDocsAdmonitionType(node ast.Node) MkDocsAdmonitionType {
+	n, ok := node.(*parser.MkDocsAdmonition)
 	if !ok {
 		return ANone
 	}
@@ -74,10 +74,10 @@ func ParseAdmonitionType(node ast.Node) AdmonitionType {
 	}
 }
 
-// GenerateAdmonitionLevel walks a given node and returns a map of blockquote levels
-func GenerateAdmonitionLevel(someNode ast.Node) AdmonitionLevelMap {
+// GenerateMkDocsAdmonitionLevel walks a given node and returns a map of blockquote levels
+func GenerateMkDocsAdmonitionLevel(someNode ast.Node) MkDocsAdmonitionLevelMap {
 
-	// We define state variable that track BlockQuote level while we walk the tree
+	// We define state variable that tracks BlockQuote level while we walk the tree
 	admonitionLevel := 0
 	AdmonitionLevelMap := make(map[ast.Node]int)
 
@@ -99,14 +99,14 @@ func GenerateAdmonitionLevel(someNode ast.Node) AdmonitionLevelMap {
 }
 
 // renderBlockQuote will render a BlockQuote
-func (r *ConfluenceAdmonitionRenderer) renderAdmon(writer util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmon(writer util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	//	Initialize BlockQuote level map
-	n := node.(*parser.Admonition)
+	n := node.(*parser.MkDocsAdmonition)
 	if r.LevelMap == nil {
-		r.LevelMap = GenerateAdmonitionLevel(node)
+		r.LevelMap = GenerateMkDocsAdmonitionLevel(node)
 	}
 
-	admonitionType := ParseAdmonitionType(node)
+	admonitionType := ParseMkDocsAdmonitionType(node)
 	admonitionLevel := r.LevelMap.Level(node)
 
 	if admonitionLevel == 0 && entering && admonitionType != ANone {
@@ -130,15 +130,15 @@ func (r *ConfluenceAdmonitionRenderer) renderAdmon(writer util.BufWriter, source
 		}
 		return ast.WalkContinue, nil
 	}
-	return r.renderAdmonition(writer, source, node, entering)
+	return r.renderMkDocsAdmonition(writer, source, node, entering)
 }
 
-func (r *ConfluenceAdmonitionRenderer) renderAdmonition(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	n := node.(*parser.Admonition)
+func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmonition(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	n := node.(*parser.MkDocsAdmonition)
 	if entering {
 		if n.Attributes() != nil {
 			_, _ = w.WriteString("<blockquote")
-			html.RenderAttributes(w, n, AdmonitionAttributeFilter)
+			html.RenderAttributes(w, n, MkDocsAdmonitionAttributeFilter)
 			_ = w.WriteByte('>')
 		} else {
 			_, _ = w.WriteString("<blockquote>\n")
