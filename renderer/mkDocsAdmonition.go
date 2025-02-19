@@ -3,7 +3,7 @@ package renderer
 import (
 	"fmt"
 
-	parser "github.com/stefanfritsch/goldmark-admonitions"
+	"github.com/kovetskiy/mark/parser"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
@@ -30,7 +30,7 @@ func NewConfluenceMkDocsAdmonitionRenderer(opts ...html.Option) renderer.NodeRen
 
 // RegisterFuncs implements NodeRenderer.RegisterFuncs.
 func (r *ConfluenceMkDocsAdmonitionRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
-	reg.Register(parser.KindAdmonition, r.renderMkDocsAdmonition)
+	reg.Register(parser.KindMkDocsAdmonition, r.renderMkDocsAdmon)
 }
 
 // Define MkDocsAdmonitionType enum
@@ -55,7 +55,7 @@ func (m MkDocsAdmonitionLevelMap) Level(node ast.Node) int {
 }
 
 func ParseMkDocsAdmonitionType(node ast.Node) MkDocsAdmonitionType {
-	n, ok := node.(*parser.Admonition)
+	n, ok := node.(*parser.MkDocsAdmonition)
 	if !ok {
 		return ANone
 	}
@@ -99,9 +99,9 @@ func GenerateMkDocsAdmonitionLevel(someNode ast.Node) MkDocsAdmonitionLevelMap {
 }
 
 // renderBlockQuote will render a BlockQuote
-func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmonition(writer util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmon(writer util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	//	Initialize BlockQuote level map
-	n := node.(*parser.Admonition)
+	n := node.(*parser.MkDocsAdmonition)
 	if r.LevelMap == nil {
 		r.LevelMap = GenerateMkDocsAdmonitionLevel(node)
 	}
@@ -130,11 +130,11 @@ func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmonition(writer util.
 		}
 		return ast.WalkContinue, nil
 	}
-	return r.renderMkDocsAdmon(writer, source, node, entering)
+	return r.renderMkDocsAdmonition(writer, source, node, entering)
 }
 
-func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmon(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
-	n := node.(*parser.Admonition)
+func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmonition(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	n := node.(*parser.MkDocsAdmonition)
 	if entering {
 		if n.Attributes() != nil {
 			_, _ = w.WriteString("<blockquote")
