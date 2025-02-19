@@ -12,42 +12,42 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
-// A Admonition struct represents a fenced code block of Markdown text.
-type Admonition struct {
+// An MkDocsAdmonition struct represents a fenced code block of Markdown text.
+type MkDocsAdmonition struct {
 	ast.BaseBlock
 	AdmonitionClass []byte
 	Title           []byte
 }
 
-// Dump implements Node.Dump .
-func (n *Admonition) Dump(source []byte, level int) {
+// Dump implements Node.Dump.
+func (n *MkDocsAdmonition) Dump(source []byte, level int) {
 	ast.DumpHelper(n, source, level, nil, nil)
 }
 
-// KindAdmonition is a NodeKind of the Admonition node.
-var KindAdmonition = ast.NewNodeKind("Admonition")
+// KindMkDocsAdmonition is a NodeKind of the MkDocsAdmonition node.
+var KindMkDocsAdmonition = ast.NewNodeKind("MkDocsAdmonition")
 
 // Kind implements Node.Kind.
-func (n *Admonition) Kind() ast.NodeKind {
-	return KindAdmonition
+func (n *MkDocsAdmonition) Kind() ast.NodeKind {
+	return KindMkDocsAdmonition
 }
 
-// NewAdmonition return a new Admonition node.
-func NewAdmonition() *Admonition {
-	return &Admonition{
+// NewMkDocsAdmonition return a new MkDocsAdmonition node.
+func NewMkDocsAdmonition() *MkDocsAdmonition {
+	return &MkDocsAdmonition{
 		BaseBlock: ast.BaseBlock{},
 	}
 }
 
-type admonitionParser struct {
+type mkDocsAdmonitionParser struct {
 }
 
-var defaultAdmonitionParser = &admonitionParser{}
+var defaultMkDocsAdmonitionParser = &mkDocsAdmonitionParser{}
 
-// NewAdmonitionParser returns a new BlockParser that
-// parses admonition blocks.
-func NewAdmonitionParser() parser.BlockParser {
-	return defaultAdmonitionParser
+// NewMkDocsAdmonitionParser returns a new BlockParser that
+// parses MkDocsAdmonition blocks.
+func NewMkDocsAdmonitionParser() parser.BlockParser {
+	return defaultMkDocsAdmonitionParser
 }
 
 type admonitionData struct {
@@ -62,11 +62,11 @@ type admonitionData struct {
 
 var admonitionInfoKey = parser.NewContextKey()
 
-func (b *admonitionParser) Trigger() []byte {
+func (b *mkDocsAdmonitionParser) Trigger() []byte {
 	return []byte{'!'}
 }
 
-func (b *admonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.Context) (ast.Node, parser.State) {
+func (b *mkDocsAdmonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.Context) (ast.Node, parser.State) {
 	line, _ := reader.PeekLine()
 	pos := pc.BlockOffset()
 	if pos < 0 || line[pos] != '!' {
@@ -84,9 +84,7 @@ func (b *admonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.C
 		return nil, parser.NoChildren
 	}
 
-	// ========================================================================== //
 	// 	Without attributes we return
-
 	if i >= len(line)-1 {
 		// If there are no attributes we can't create a div because we won't know
 		// if a "!!!" ends the last admonition or opens a new one
@@ -104,7 +102,6 @@ func (b *admonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.C
 		return nil, parser.NoChildren
 	}
 
-	// ========================================================================== //
 	// 	With attributes we construct the node
 	node := parseOpeningLine(reader, left)
 	admonitionID := genRandomString(24)
@@ -129,9 +126,7 @@ func (b *admonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.C
 	}
 	pc.Set(admonitionInfoKey, fdataMap)
 
-	// ========================================================================== //
 	// 	 check if it's an empty block
-
 	line, _ = reader.PeekLine()
 	w, pos := util.IndentWidth(line, reader.LineOffset())
 
@@ -146,14 +141,13 @@ func (b *admonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.C
 // * admonition class
 // * admonition title
 // * attributes
-func parseOpeningLine(reader text.Reader, left int) *Admonition {
-	node := NewAdmonition()
+func parseOpeningLine(reader text.Reader, left int) *MkDocsAdmonition {
+	node := NewMkDocsAdmonition()
 	reader.Advance(left)
 
 	remainingLine, _ := reader.PeekLine()
 	remainingLength := len(remainingLine) - 1
 
-	// ========================================================================== //
 	// 	find class
 	endClass := 0
 	for ; endClass < remainingLength && remainingLine[endClass] != ' ' && remainingLine[endClass] != '{'; endClass++ {
@@ -162,7 +156,6 @@ func parseOpeningLine(reader text.Reader, left int) *Admonition {
 		node.AdmonitionClass = remainingLine[0:endClass]
 	}
 
-	// ========================================================================== //
 	// 	find title
 	startTitle := endClass + util.TrimLeftSpaceLength(remainingLine[endClass:])
 	endTitle := startTitle
@@ -181,7 +174,6 @@ func parseOpeningLine(reader text.Reader, left int) *Admonition {
 		reader.Advance(remainingLength)
 	}
 
-	// ========================================================================== //
 	// 	find attributes
 	hasClass := false
 	admClass := bytes.Join([][]byte{[]byte("admonition adm-"), node.AdmonitionClass}, []byte(""))
@@ -211,17 +203,14 @@ func parseOpeningLine(reader text.Reader, left int) *Admonition {
 	return node
 }
 
-func (b *admonitionParser) Continue(node ast.Node, reader text.Reader, pc parser.Context) parser.State {
-	// ========================================================================== //
+func (b *mkDocsAdmonitionParser) Continue(node ast.Node, reader text.Reader, pc parser.Context) parser.State {
 	// Get admonitionID from node
-
 	rawAdmonitionID, ok := node.AttributeString("data-admonition")
 	if !ok {
 		fmt.Println("Admonition ID is missing")
 	}
 	admonitionID := string(rawAdmonitionID.([]byte))
 
-	// ========================================================================== //
 	// 	Get admonition for current admonition
 	rawdata := pc.Get(admonitionInfoKey)
 	fdataMap := rawdata.([]*admonitionData)
@@ -241,9 +230,7 @@ func (b *admonitionParser) Continue(node ast.Node, reader text.Reader, pc parser
 		}
 	}
 
-	// ========================================================================== //
 	// 	Set indentation level if it hasn't been set yet
-
 	line, segment := reader.PeekLine()
 	w, pos := util.IndentWidth(line, reader.LineOffset())
 
@@ -255,7 +242,6 @@ func (b *admonitionParser) Continue(node ast.Node, reader text.Reader, pc parser
 		pc.Set(admonitionInfoKey, fdataMap)
 	}
 
-	// ========================================================================== //
 	// Are we closing the node?
 	// * Either the indentation is below the indentation of the opening tags
 	// * or it is at the level of the opening tags but the content was indented
@@ -297,14 +283,14 @@ func (b *admonitionParser) Continue(node ast.Node, reader text.Reader, pc parser
 	return parser.Continue | parser.HasChildren
 }
 
-func (b *admonitionParser) Close(node ast.Node, reader text.Reader, pc parser.Context) {
+func (b *mkDocsAdmonitionParser) Close(node ast.Node, reader text.Reader, pc parser.Context) {
 }
 
-func (b *admonitionParser) CanInterruptParagraph() bool {
+func (b *mkDocsAdmonitionParser) CanInterruptParagraph() bool {
 	return true
 }
 
-func (b *admonitionParser) CanAcceptIndentedLine() bool {
+func (b *mkDocsAdmonitionParser) CanAcceptIndentedLine() bool {
 	return false
 }
 
