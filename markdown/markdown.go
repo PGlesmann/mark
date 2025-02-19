@@ -60,7 +60,7 @@ func (c *ConfluenceExtension) Extend(m goldmark.Markdown) {
 
 	m.Parser().AddOptions(
 		parser.WithBlockParsers(
-			util.Prioritized(cparser.NewMkDocsAdmonitionParser(), 100),
+			util.Prioritized(mkDocsParser.NewAdmonitionParser(), 100),
 		),
 	)
 
