@@ -30,7 +30,7 @@ func NewConfluenceMkDocsAdmonitionRenderer(opts ...html.Option) renderer.NodeRen
 
 // RegisterFuncs implements NodeRenderer.RegisterFuncs.
 func (r *ConfluenceMkDocsAdmonitionRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
-	reg.Register(parser.KindAdmonition, r.renderMkDocsAdmon)
+	reg.Register(parser.KindAdmonition, r.renderMkDocsAdmonition)
 }
 
 // Define MkDocsAdmonitionType enum
@@ -99,7 +99,7 @@ func GenerateMkDocsAdmonitionLevel(someNode ast.Node) MkDocsAdmonitionLevelMap {
 }
 
 // renderBlockQuote will render a BlockQuote
-func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmon(writer util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmonition(writer util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	//	Initialize BlockQuote level map
 	n := node.(*parser.Admonition)
 	if r.LevelMap == nil {
@@ -133,7 +133,7 @@ func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmon(writer util.BufWr
 	return r.renderMkDocsAdmonition(writer, source, node, entering)
 }
 
-func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmonition(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmon(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	n := node.(*parser.Admonition)
 	if entering {
 		if n.Attributes() != nil {
