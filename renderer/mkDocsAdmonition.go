@@ -130,7 +130,7 @@ func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmonition(writer util.
 		}
 		return ast.WalkContinue, nil
 	}
-	return r.renderMkDocsAdmonition(writer, source, node, entering)
+	return r.renderMkDocsAdmon(writer, source, node, entering)
 }
 
 func (r *ConfluenceMkDocsAdmonitionRenderer) renderMkDocsAdmon(w util.BufWriter, source []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
