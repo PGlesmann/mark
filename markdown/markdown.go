@@ -9,6 +9,7 @@ import (
 	"github.com/kovetskiy/mark/stdlib"
 	"github.com/kovetskiy/mark/types"
 	"github.com/reconquest/pkg/log"
+	mkDocsParser "github.com/stefanfritsch/goldmark-admonitions"
 	"github.com/yuin/goldmark"
 
 	"github.com/yuin/goldmark/extension"
@@ -59,7 +60,7 @@ func (c *ConfluenceExtension) Extend(m goldmark.Markdown) {
 
 	m.Parser().AddOptions(
 		parser.WithBlockParsers(
-			util.Prioritized(cparser.NewMkDocsAdmonitionParser(), 100),
+			util.Prioritized(mkDocsParser.NewAdmonitionParser(), 100),
 		),
 	)
 
