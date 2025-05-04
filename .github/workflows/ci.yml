@@ -11,7 +11,7 @@ on:
     - master
 
 env:
-  GO_VERSION: "~1.23.1"
+  GO_VERSION: "~1.24"
 
 jobs:
   # Runs Golangci-lint on the source code
@@ -29,7 +29,7 @@ jobs:
       id: go
 
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v7
 
   # Runs markdown-lint on the markdown files
   ci-markdown-lint:
