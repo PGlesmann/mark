@@ -2,6 +2,7 @@ package mark
 
 import (
 	"bytes"
+	"slices"
 
 	"github.com/kovetskiy/mark/attachment"
 	cparser "github.com/kovetskiy/mark/parser"
@@ -55,14 +56,19 @@ func (c *ConfluenceExtension) Extend(m goldmark.Markdown) {
 		util.Prioritized(crenderer.NewConfluenceImageRenderer(c.Stdlib, c, c.Path), 100),
 		util.Prioritized(crenderer.NewConfluenceParagraphRenderer(), 100),
 		util.Prioritized(crenderer.NewConfluenceLinkRenderer(), 100),
-		util.Prioritized(crenderer.NewConfluenceMkDocsAdmonitionRenderer(), 100),
 	))
 
-	m.Parser().AddOptions(
-		parser.WithBlockParsers(
-			util.Prioritized(mkDocsParser.NewAdmonitionParser(), 100),
-		),
-	)
+	if slices.Contains(c.MarkConfig.Features, "mkdocsadmonitions") {
+		m.Parser().AddOptions(
+			parser.WithBlockParsers(
+				util.Prioritized(mkDocsParser.NewAdmonitionParser(), 100),
+			),
+		)
+
+		m.Renderer().AddOptions(renderer.WithNodeRenderers(
+			util.Prioritized(crenderer.NewConfluenceMkDocsAdmonitionRenderer(), 100),
+		))
+	}
 
 	m.Parser().AddOptions(parser.WithInlineParsers(
 		// Must be registered with a higher priority than goldmark's linkParser to make sure goldmark doesn't parse
