@@ -1,7 +1,7 @@
 NAME = $(notdir $(PWD))
 
 VERSION = $(shell git describe --tags --abbrev=0)
-
+COMMIT = $(shell git rev-parse HEAD)
 GO111MODULE = on
 
 REMOTE = kovetskiy
@@ -15,11 +15,11 @@ get:
 build:
 	@echo :: building go binary $(VERSION)
 	CGO_ENABLED=0 go build \
-		-ldflags "-X main.version=$(VERSION)" \
+		-ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT)" \
 		-gcflags "-trimpath $(GOPATH)/src"
 
 test:
-	go test -race -coverprofile=profile.cov ./...
+	go test -race -coverprofile=profile.cov ./... -v
 
 image:
 	@echo :: building image $(NAME):$(VERSION)

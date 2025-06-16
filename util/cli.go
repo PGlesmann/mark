@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -22,18 +23,19 @@ import (
 	"github.com/kovetskiy/mark/metadata"
 	"github.com/kovetskiy/mark/page"
 	"github.com/kovetskiy/mark/stdlib"
+	"github.com/kovetskiy/mark/types"
 	"github.com/kovetskiy/mark/vfs"
 	"github.com/reconquest/karma-go"
 	"github.com/reconquest/pkg/log"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
-func RunMark(cCtx *cli.Context) error {
-	if err := SetLogLevel(cCtx); err != nil {
+func RunMark(ctx context.Context, cmd *cli.Command) error {
+	if err := SetLogLevel(cmd); err != nil {
 		return err
 	}
 
-	if cCtx.String("color") == "never" {
+	if cmd.String("color") == "never" {
 		log.GetLogger().SetFormat(
 			lorg.NewFormat(
 				`${time:2006-01-02 15:04:05.000} ${level:%s:left:true} ${prefix}%s`,
@@ -42,20 +44,20 @@ func RunMark(cCtx *cli.Context) error {
 		log.GetLogger().SetOutput(os.Stderr)
 	}
 
-	creds, err := GetCredentials(cCtx.String("username"), cCtx.String("password"), cCtx.String("target-url"), cCtx.String("base-url"), cCtx.Bool("compile-only"))
+	creds, err := GetCredentials(cmd.String("username"), cmd.String("password"), cmd.String("target-url"), cmd.String("base-url"), cmd.Bool("compile-only"))
 	if err != nil {
 		return err
 	}
 
 	api := confluence.NewAPI(creds.BaseURL, creds.Username, creds.Password)
 
-	files, err := doublestar.FilepathGlob(cCtx.String("files"))
+	files, err := doublestar.FilepathGlob(cmd.String("files"))
 	if err != nil {
 		return err
 	}
 	if len(files) == 0 {
 		msg := "No files matched"
-		if cCtx.Bool("ci") {
+		if cmd.Bool("ci") {
 			log.Warning(msg)
 		} else {
 			log.Fatal(msg)
@@ -63,16 +65,16 @@ func RunMark(cCtx *cli.Context) error {
 	}
 
 	log.Debug("config:")
-	for _, f := range cCtx.Command.Flags {
+	for _, f := range cmd.Flags {
 		flag := f.Names()
 		if flag[0] == "password" {
 			log.Debugf(nil, "%20s: %v", flag[0], "******")
 		} else {
-			log.Debugf(nil, "%20s: %v", flag[0], cCtx.Value(flag[0]))
+			log.Debugf(nil, "%20s: %v", flag[0], cmd.Value(flag[0]))
 		}
 	}
 
-	fatalErrorHandler := NewErrorHandler(cCtx.Bool("continue-on-error"))
+	fatalErrorHandler := NewErrorHandler(cmd.Bool("continue-on-error"))
 
 	// Loop through files matched by glob pattern
 	for _, file := range files {
@@ -82,7 +84,7 @@ func RunMark(cCtx *cli.Context) error {
 			file,
 		)
 
-		target := processFile(file, api, cCtx, creds.PageID, creds.Username, fatalErrorHandler)
+		target := processFile(file, api, cmd, creds.PageID, creds.Username, fatalErrorHandler)
 
 		if target != nil { // on dry-run or compile-only, the target is nil
 			log.Infof(
@@ -99,7 +101,7 @@ func RunMark(cCtx *cli.Context) error {
 func processFile(
 	file string,
 	api *confluence.API,
-	cCtx *cli.Context,
+	cmd *cli.Command,
 	pageID string,
 	username string,
 	fatalErrorHandler *FatalErrorHandler,
@@ -112,9 +114,9 @@ func processFile(
 
 	markdown = bytes.ReplaceAll(markdown, []byte("\r\n"), []byte("\n"))
 
-	parents := strings.Split(cCtx.String("parents"), cCtx.String("parents-delimiter"))
+	parents := strings.Split(cmd.String("parents"), cmd.String("parents-delimiter"))
 
-	meta, markdown, err := metadata.ExtractMeta(markdown, cCtx.String("space"), cCtx.Bool("title-from-h1"), parents, cCtx.Bool("title-append-generated-hash"))
+	meta, markdown, err := metadata.ExtractMeta(markdown, cmd.String("space"), cmd.Bool("title-from-h1"), parents, cmd.Bool("title-append-generated-hash"))
 	if err != nil {
 		fatalErrorHandler.Handle(err, "unable to extract metadata from file %q", file)
 		return nil
@@ -134,14 +136,16 @@ func processFile(
 		return nil
 	}
 
-	if meta.Space == "" {
-		fatalErrorHandler.Handle(nil, "space is not set ('Space' header is not set and '--space' option is not set)")
-		return nil
-	}
+	if meta != nil {
+		if meta.Space == "" {
+			fatalErrorHandler.Handle(nil, "space is not set ('Space' header is not set and '--space' option is not set)")
+			return nil
+		}
 
-	if meta.Title == "" {
-		fatalErrorHandler.Handle(nil, "page title is not set ('Title' header is not set and '--title-from-h1' option and 'h1_title' config is not set or there is no H1 in the file)")
-		return nil
+		if meta.Title == "" {
+			fatalErrorHandler.Handle(nil, "page title is not set ('Title' header is not set and '--title-from-h1' option and 'h1-title' config is not set or there is no H1 in the file)")
+			return nil
+		}
 	}
 
 	stdlib, err := stdlib.New(api)
@@ -157,7 +161,7 @@ func processFile(
 	for {
 		templates, markdown, recurse, err = includes.ProcessIncludes(
 			filepath.Dir(file),
-			cCtx.String("include-path"),
+			cmd.String("include-path"),
 			markdown,
 			templates,
 		)
@@ -173,7 +177,7 @@ func processFile(
 
 	macros, markdown, err := macro.ExtractMacros(
 		filepath.Dir(file),
-		cCtx.String("include-path"),
+		cmd.String("include-path"),
 		markdown,
 		templates,
 	)
@@ -192,7 +196,7 @@ func processFile(
 		}
 	}
 
-	links, err := page.ResolveRelativeLinks(api, meta, markdown, filepath.Dir(file), cCtx.String("space"), cCtx.Bool("title-from-h1"), parents, cCtx.Bool("title-append-generated-hash"))
+	links, err := page.ResolveRelativeLinks(api, meta, markdown, filepath.Dir(file), cmd.String("space"), cmd.Bool("title-from-h1"), parents, cmd.Bool("title-append-generated-hash"))
 	if err != nil {
 		fatalErrorHandler.Handle(err, "unable to resolve relative links")
 		return nil
@@ -200,21 +204,30 @@ func processFile(
 
 	markdown = page.SubstituteLinks(markdown, links)
 
-	if cCtx.Bool("dry-run") {
-		_, _, err := page.ResolvePage(cCtx.Bool("dry-run"), api, meta)
+	if cmd.Bool("dry-run") {
+		_, _, err := page.ResolvePage(cmd.Bool("dry-run"), api, meta)
 		if err != nil {
 			fatalErrorHandler.Handle(err, "unable to resolve page location")
 			return nil
 		}
 	}
 
-	if cCtx.Bool("compile-only") || cCtx.Bool("dry-run") {
-		if cCtx.Bool("drop-h1") {
+	if cmd.Bool("compile-only") || cmd.Bool("dry-run") {
+		if cmd.Bool("drop-h1") {
 			log.Info(
 				"the leading H1 heading will be excluded from the Confluence output",
 			)
 		}
-		html, _ := mark.CompileMarkdown(markdown, stdlib, file, cCtx.String("mermaid-provider"), cCtx.Float64("mermaid-scale"), cCtx.Bool("drop-h1"), cCtx.Bool("strip-linebreaks"))
+
+		cfg := types.MarkConfig{
+			MermaidProvider: cmd.String("mermaid-provider"),
+			MermaidScale:    cmd.Float("mermaid-scale"),
+			D2Scale:         cmd.Float("d2-scale"),
+			DropFirstH1:     cmd.Bool("drop-h1"),
+			StripNewlines:   cmd.Bool("strip-linebreaks"),
+			Features:        cmd.StringSlice("features"),
+		}
+		html, _ := mark.CompileMarkdown(markdown, stdlib, file, cfg)
 		fmt.Println(html)
 		return nil
 	}
@@ -222,7 +235,7 @@ func processFile(
 	var target *confluence.PageInfo
 
 	if meta != nil {
-		parent, page, err := page.ResolvePage(cCtx.Bool("dry-run"), api, meta)
+		parent, page, err := page.ResolvePage(cmd.Bool("dry-run"), api, meta)
 		if err != nil {
 			fatalErrorHandler.Handle(karma.Describe("title", meta.Title).Reason(err), "unable to resolve %s", meta.Type)
 			return nil
@@ -281,13 +294,21 @@ func processFile(
 
 	markdown = attachment.CompileAttachmentLinks(markdown, attaches)
 
-	if cCtx.Bool("drop-h1") {
+	if cmd.Bool("drop-h1") {
 		log.Info(
 			"the leading H1 heading will be excluded from the Confluence output",
 		)
 	}
+	cfg := types.MarkConfig{
+		MermaidProvider: cmd.String("mermaid-provider"),
+		MermaidScale:    cmd.Float("mermaid-scale"),
+		D2Scale:         cmd.Float("d2-scale"),
+		DropFirstH1:     cmd.Bool("drop-h1"),
+		StripNewlines:   cmd.Bool("strip-linebreaks"),
+		Features:        cmd.StringSlice("features"),
+	}
 
-	html, inlineAttachments := mark.CompileMarkdown(markdown, stdlib, file, cCtx.String("mermaid-provider"), cCtx.Float64("mermaid-scale"), cCtx.Bool("drop-h1"), cCtx.Bool("strip-linebreaks"))
+	html, inlineAttachments := mark.CompileMarkdown(markdown, stdlib, file, cfg)
 
 	// Resolve attachements detected from markdown
 	_, err = attachment.ResolveAttachments(
@@ -327,7 +348,7 @@ func processFile(
 	var finalVersionMessage string
 	var shouldUpdatePage = true
 
-	if cCtx.Bool("changes-only") {
+	if cmd.Bool("changes-only") {
 		contentHash := getSHA1Hash(html)
 
 		log.Debugf(
@@ -358,13 +379,13 @@ func processFile(
 			}
 		}
 
-		finalVersionMessage = fmt.Sprintf("%s [v%s]", cCtx.String("version-message"), contentHash)
+		finalVersionMessage = fmt.Sprintf("%s [v%s]", cmd.String("version-message"), contentHash)
 	} else {
-		finalVersionMessage = cCtx.String("version-message")
+		finalVersionMessage = cmd.String("version-message")
 	}
 
 	if shouldUpdatePage {
-		err = api.UpdatePage(target, html, cCtx.Bool("minor-edit"), finalVersionMessage, meta.Labels, meta.ContentAppearance, meta.Emoji)
+		err = api.UpdatePage(target, html, cmd.Bool("minor-edit"), finalVersionMessage, meta.Labels, meta.ContentAppearance, meta.Emoji)
 		if err != nil {
 			fatalErrorHandler.Handle(err, "unable to update page")
 			return nil
@@ -375,7 +396,7 @@ func processFile(
 		return nil
 	}
 
-	if cCtx.Bool("edit-lock") {
+	if cmd.Bool("edit-lock") {
 		log.Infof(
 			nil,
 			`edit locked on page %q by user %q to prevent manual edits`,
@@ -462,11 +483,11 @@ func ConfigFilePath() string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return filepath.Join(fp, "mark")
+	return filepath.Join(fp, "mark.toml")
 }
 
-func SetLogLevel(cCtx *cli.Context) error {
-	logLevel := cCtx.String("log-level")
+func SetLogLevel(cmd *cli.Command) error {
+	logLevel := cmd.String("log-level")
 	switch strings.ToUpper(logLevel) {
 	case lorg.LevelTrace.String():
 		log.SetLevel(lorg.LevelTrace)
